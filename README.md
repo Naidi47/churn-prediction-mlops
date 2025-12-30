@@ -89,7 +89,7 @@ This MLOps pipeline handles:
 
 - Python 3.10.13 (exact version)
 - Docker 24.0.7+
-- AWS CLI configured
+- Render Dashboard
 - PostgreSQL 15.4+
 - Redis 7.2.3+
 
@@ -97,7 +97,7 @@ This MLOps pipeline handles:
 
 1. **Clone and setup**:
 ```bash
-git clone https://github.com/company/churn-prediction-model.git
+git clone https://github.com/Naidi47/churn-prediction-model.git
 cd churn-prediction-model
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
@@ -128,10 +128,8 @@ python -m uvicorn src.api.main:app --reload
 docker build -f deployments/docker/Dockerfile.production -t churn-model:latest .
 ```
 
-2. **Deploy to AWS ECS**:
-```bash
-./scripts/deploy.sh --env production --tag latest
-```
+2. **Deploy via Render Dashboard**:  
+   Trigger a production deployment directly from the Render dashboard by selecting the service and redeploying the latest version.
 
 3. **Verify deployment**:
 ```bash
@@ -158,7 +156,8 @@ docker build -f deployments/docker/Dockerfile.production -t churn-model:latest .
 | `MLFLOW_TRACKING_URI` | MLflow tracking server URL | Required |
 | `POSTGRES_HOST` | PostgreSQL host | Required |
 | `REDIS_HOST` | Redis host | Required |
-| `JWT_SECRET_KEY` | JWT secret for API authentication | Required |
+| `JWT_SECRET_KEY` | JWT secret key configured in the Render Dashboard for securing the deployed `mlops-api` service | Required |
+
 
 ### Model Configuration
 
@@ -373,7 +372,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Built with ❤️ by the MLOps Team at Company**
+**Built with ❤️ the help of LLM's**
 
-*Last updated: 2024-01-15*
-*Next review: 2024-04-15*
+*Last updated: 2025-28-12
