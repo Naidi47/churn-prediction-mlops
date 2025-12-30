@@ -5,7 +5,7 @@ A battle-tested, FAANG-interview-dominating, CTO-ready MLOps pipeline that demon
 🔗Live MLOps Dashboard: [Open Dashboard](https://mlops-dashboard-44dy.onrender.com/)
 
 
-[![CI/CD Pipeline](https://github.com/company/churn-prediction-model/workflows/MLOps%20Production%20Pipeline/badge.svg)](https://github.com/company/churn-prediction-model/actions)
+[![CI/CD Pipeline](https://github.com/Naidi47/churn-prediction-mlops/actions/workflows/ci.yaml/badge.svg)](https://github.com/Naidi47/churn-prediction-mlops/actions)
 [![Python 3.10.13](https://img.shields.io/badge/python-3.10.13-blue.svg)](https://www.python.org/downloads/release/python-31013/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
