@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+venv/
+
+# ML artifacts
+models/*.pkl
+models/*.json
+mlruns/
+data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log

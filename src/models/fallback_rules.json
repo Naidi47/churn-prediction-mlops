@@ -1,0 +1,35 @@
+{
+  "tenure_rules": {
+    "new_customer_threshold": 90,
+    "new_customer_churn_probability": 0.7,
+    "loyal_customer_threshold": 730,
+    "loyal_customer_churn_probability": 0.1
+  },
+  "payment_rules": {
+    "high_churn_methods": [
+      "Check",
+      "Bank Transfer"
+    ],
+    "high_churn_probability": 0.6,
+    "low_churn_methods": [
+      "Credit Card",
+      "PayPal"
+    ],
+    "low_churn_probability": 0.3
+  },
+  "contract_rules": {
+    "month_to_month_probability": 0.6,
+    "one_year_probability": 0.3,
+    "two_year_probability": 0.1
+  },
+  "service_rules": {
+    "multiple_services_bonus": -0.1,
+    "no_services_penalty": 0.2
+  },
+  "billing_rules": {
+    "high_charges_threshold": 100,
+    "high_charges_penalty": 0.15,
+    "unpaid_bills_penalty": 0.3
+  },
+  "default_probability": 0.4
+}

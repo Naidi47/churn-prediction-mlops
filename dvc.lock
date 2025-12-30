@@ -1,0 +1,176 @@
+schema: '2.0'
+stages:
+  ingest:
+    cmd: python src/data_pipeline/ingest.py
+    deps:
+    - path: src/data_pipeline/ingest.py
+      hash: md5
+      md5: 8a019331799b6546cfb30d8abff5e353
+      size: 11575
+    params:
+      params.yaml:
+        data_source:
+          url: s3://customer-data-lake/churn/
+          format: parquet
+          date_range: 2023-01-01 to 2024-12-01
+    outs:
+    - path: data/raw/customer_data.csv
+      hash: md5
+      md5: 5416a4ae3e7d6ba4b65f3127d06bee86
+      size: 12209427
+    - path: data/raw/ingest_metrics.json
+      hash: md5
+      md5: 7bf087cf9c7ae2627760e227bb7ae0e7
+      size: 205
+  validate:
+    cmd: python src/data_pipeline/validate.py
+    deps:
+    - path: data/raw/customer_data.csv
+      hash: md5
+      md5: 5416a4ae3e7d6ba4b65f3127d06bee86
+      size: 12209427
+    - path: src/data_pipeline/validate.py
+      hash: md5
+      md5: b8779b135f1a2675c798381462a59b2e
+      size: 16080
+    params:
+      params.yaml:
+        validation:
+          null_threshold: 0.05
+          drift_threshold: 0.1
+          expectation_suite: churn_data_suite
+    outs:
+    - path: data/validated/customer_data_validated.csv
+      hash: md5
+      md5: 123e77518a22baef7428a6f4f8eaadcd
+      size: 12184402
+    - path: data/validation_report.json
+      hash: md5
+      md5: e47ca3b4f37835729909c413a1f1eb9e
+      size: 16054
+  featurize:
+    cmd: python src/data_pipeline/featurize.py
+    deps:
+    - path: data/validated/customer_data_validated.csv
+      hash: md5
+      md5: 123e77518a22baef7428a6f4f8eaadcd
+      size: 12184402
+    - path: src/data_pipeline/featurize.py
+      hash: md5
+      md5: e163d6a24790192e5139d29943e86759
+      size: 17690
+    params:
+      params.yaml:
+        features:
+          target_column: churn
+          categorical_features:
+          - region
+          - payment_method
+          - subscription_type
+          numerical_features:
+          - tenure_days
+          - monthly_charges
+          - total_charges
+          feature_crosses: true
+          scaling_method: standard
+    outs:
+    - path: data/processed/X_test.npy
+      hash: md5
+      md5: aa97ea0325741da4fc45141b3c868d58
+      size: 6080128
+    - path: data/processed/X_train.npy
+      hash: md5
+      md5: 13c230ce9c8523525fb4a791cd6a6080
+      size: 24320128
+    - path: data/processed/feature_metrics.json
+      hash: md5
+      md5: 21e714ea7c409fbcd95329e56565b801
+      size: 1617
+    - path: data/processed/y_test.npy
+      hash: md5
+      md5: e72639fd6734ad6a9e24a53bf95cc565
+      size: 160128
+    - path: data/processed/y_train.npy
+      hash: md5
+      md5: bac8fee5f6d7cde641a6d8371809a6f8
+      size: 640128
+    - path: models/feature_transformer.onnx
+      hash: md5
+      md5: 0d7b57e57595956e50c82ac41e200490
+      size: 2201
+  evaluate:
+    cmd: python src/models/evaluate.py
+    deps:
+    - path: data/processed/X_test.npy
+      hash: md5
+      md5: aa97ea0325741da4fc45141b3c868d58
+      size: 6080128
+    - path: data/processed/y_test.npy
+      hash: md5
+      md5: e72639fd6734ad6a9e24a53bf95cc565
+      size: 160128
+    - path: models/churn_model.pkl
+      hash: md5
+      md5: 7cfaa13adcd4969f8e4cfe6704a1c133
+      size: 414514
+    - path: src/models/evaluate.py
+      hash: md5
+      md5: 5cb5bc9c2a317de440646e44c90b3680
+      size: 12685
+    params:
+      params.yaml:
+        evaluation:
+          metrics:
+          - accuracy
+          - precision
+          - recall
+          - f1
+          - auc
+          calibration_bins: 10
+          fairness_metrics: true
+          slice_analysis: true
+    outs:
+    - path: models/evaluation/
+      hash: md5
+      md5: 52d7da850db199845336a6db6663114e.dir
+      size: 273341
+      nfiles: 4
+    - path: models/evaluation_metrics.json
+      hash: md5
+      md5: d3af25feec8e35b010e4587ef7a5e78b
+      size: 494
+  register:
+    cmd: python src/models/register.py
+    deps:
+    - path: models/churn_model.pkl
+      hash: md5
+      md5: 7cfaa13adcd4969f8e4cfe6704a1c133
+      size: 414514
+    - path: models/evaluation_metrics.json
+      hash: md5
+      md5: d3af25feec8e35b010e4587ef7a5e78b
+      size: 494
+    - path: models/feature_transformer.onnx
+      hash: md5
+      md5: 0d7b57e57595956e50c82ac41e200490
+      size: 2201
+    - path: src/models/register.py
+      hash: md5
+      md5: d6e62fba83ad67316144137faf6dd362
+      size: 11754
+    params:
+      params.yaml:
+        mlflow:
+          experiment_name: churn_prediction_experiment
+          model_name: churn_prediction
+          stage: Staging
+          tags:
+            owner: ml-team
+            cost_center: engineering
+            p95_latency_target: 50ms
+            error_rate_target: 0.1%
+    outs:
+    - path: models/registration_metrics.json
+      hash: md5
+      md5: 36014c7ac0f179a5fb55edccd7e4b456
+      size: 552

@@ -1,0 +1,87 @@
+# Production Dockerfile for MLOps Inference Service
+# Multi-stage build with security hardening and distroless final image
+
+# ============================================================================
+# BUILDER STAGE - Install dependencies and build application
+# ============================================================================
+FROM python:3.10.13-slim as builder
+
+# Create non-root user for security
+RUN groupadd -r mluser && useradd -r -g mluser mluser
+
+# Set working directory
+WORKDIR /app
+RUN chown mluser:mluser /app
+
+# Copy requirements first (for layer caching)
+COPY --chown=mluser:mluser requirements.txt .
+
+# Install Python dependencies
+RUN pip install --user --no-cache-dir -r requirements.txt
+
+# Copy source code
+COPY --chown=mluser:mluser src/ ./src/
+COPY --chown=mluser:mluser models/ ./models/
+COPY --chown=mluser:mluser data/ ./data/
+
+# ============================================================================
+# PRODUCTION STAGE - Distroless image for security
+# ============================================================================
+FROM gcr.io/distroless/python3-debian12:nonroot
+
+# Copy installed packages from builder
+COPY --from=builder /home/mluser/.local /home/nonroot/.local
+
+# Copy application code
+COPY --from=builder --chown=nonroot:nonroot /app /app
+
+# Set working directory
+WORKDIR /app
+
+# Security hardening environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH=/home/nonroot/.local/bin:$PATH \
+    PYTHONPATH=/app \
+    LOG_LEVEL="INFO" \
+    MLFLOW_S3_ENDPOINT_URL="" \
+    APP_ENV="production"
+
+# Expose port (documentation only - distroless doesn't need EXPOSE)
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=2 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')" || exit 1
+
+# Use non-root user
+USER nonroot
+
+# Entry point
+ENTRYPOINT ["python", "-m", "uvicorn", "src.api.main:app", \
+            "--host=0.0.0.0", "--port=8000", \
+            "--workers=5", "--loop=uvloop", \
+            "--log-level=warning", \
+            "--access-log", "--proxy-headers"]
+
+# ============================================================================
+# ALTERNATIVE: Standard Python image for debugging (comment out distroless stage)
+# ============================================================================
+# FROM python:3.10.13-slim
+# 
+# WORKDIR /app
+# 
+# COPY requirements.txt .
+# RUN pip install --no-cache-dir -r requirements.txt
+# 
+# COPY src/ ./src/
+# COPY models/ ./models/
+# COPY data/ ./data/
+# 
+# ENV PYTHONPATH=/app
+# 
+# EXPOSE 8000
+# 
+# CMD ["python", "-m", "uvicorn", "src.api.main:app", \
+#     "--host=0.0.0.0", "--port=8000", \
+#     "--workers=5", "--reload"]

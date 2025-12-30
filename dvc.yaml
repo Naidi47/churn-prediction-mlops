@@ -1,0 +1,98 @@
+stages:
+  # Data Ingestion Stage
+  ingest:
+    cmd: python src/data_pipeline/ingest.py
+    deps:
+    - src/data_pipeline/ingest.py
+    params:
+    - data_source
+    outs:
+    - data/raw/customer_data.csv:
+        cache: true
+        persist: false
+    metrics:
+    - data/raw/ingest_metrics.json:
+        cache: false
+
+  # Data Validation Stage
+  validate:
+    cmd: python src/data_pipeline/validate.py
+    deps:
+    - data/raw/customer_data.csv
+    - src/data_pipeline/validate.py
+      # Removed 'great_expectations' folder to fix Windows WinError 2
+    params:
+    - validation
+    outs:
+    - data/validated/customer_data_validated.csv:
+        cache: true
+    metrics:
+    - data/validation_report.json:
+        cache: false
+
+  # Feature Engineering Stage
+  featurize:
+    cmd: python src/data_pipeline/featurize.py
+    deps:
+    - data/validated/customer_data_validated.csv
+    - src/data_pipeline/featurize.py
+      #- src/feature_engineering/transformers.py
+    params:
+    - features
+    outs:
+    - data/processed/X_train.npy:
+        cache: true
+    - data/processed/X_test.npy:
+        cache: true
+    - data/processed/y_train.npy:
+        cache: true
+    - data/processed/y_test.npy:
+        cache: true
+    - models/feature_transformer.onnx:
+        cache: true
+    metrics:
+    - data/processed/feature_metrics.json:
+        cache: false
+
+  # Model Training Stage
+  evaluate:
+    cmd: python src/models/evaluate.py
+    deps:
+    - models/churn_model.pkl
+    - data/processed/X_test.npy
+    - data/processed/y_test.npy
+    - src/models/evaluate.py
+    params:
+    - evaluation
+    outs:
+    - models/evaluation/:
+        cache: true
+    metrics:
+    - models/evaluation_metrics.json:
+        cache: false
+
+  # Model Registration Stage
+  register:
+    cmd: python src/models/register.py
+    deps:
+    - models/churn_model.pkl
+    - models/feature_transformer.onnx
+    - models/evaluation_metrics.json
+    - src/models/register.py
+    params:
+    - mlflow
+    metrics:
+    - models/registration_metrics.json:
+        cache: false
+
+# Plot configurations for visualization
+plots:
+- training_metrics.png:
+    x: epoch
+    y: [train_loss, val_loss]
+    template: linear
+
+- feature_importance.png:
+    x: feature_name
+    y: importance
+    template: bar-horizontal

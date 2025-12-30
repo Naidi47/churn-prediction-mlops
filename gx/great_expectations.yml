@@ -1,0 +1,44 @@
+fluent_datasources:
+  churn_data_source:
+    type: pandas
+    assets:
+      churn_data:
+        type: dataframe
+        batch_metadata: {}
+config_version: 3.0
+datasources: {}
+expectations_store_name: expectations_store
+validations_store_name: validations_store
+evaluation_parameter_store_name: evaluation_parameter_store
+checkpoint_store_name: checkpoint_store
+profiler_store_name: profiler_store
+plugins_directory:
+stores:
+  expectations_store:
+    class_name: ExpectationsStore
+    store_backend:
+      class_name: InMemoryStoreBackend
+  validations_store:
+    class_name: ValidationsStore
+    store_backend:
+      class_name: InMemoryStoreBackend
+  evaluation_parameter_store:
+    class_name: EvaluationParameterStore
+  checkpoint_store:
+    class_name: CheckpointStore
+    store_backend:
+      class_name: InMemoryStoreBackend
+  profiler_store:
+    class_name: ProfilerStore
+    store_backend:
+      class_name: InMemoryStoreBackend
+notebooks:
+data_docs_sites: {}
+config_variables_file_path:
+anonymous_usage_statistics:
+  data_context_id: a363ef6a-76a2-4eb2-918b-1408e5294ac1
+  enabled: true
+include_rendered_content:
+  globally: false
+  expectation_suite: false
+  expectation_validation_result: false

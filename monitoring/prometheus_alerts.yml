@@ -1,0 +1,275 @@
+groups:
+  - name: model_slo
+    interval: 30s
+    rules:
+      # High Latency Alert
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(inference_latency_seconds_bucket[5m])) > 0.05
+        for: 10m
+        labels:
+          severity: critical
+          team: ml-ops
+          service: churn-prediction
+        annotations:
+          summary: "Model p95 latency exceeded 50ms"
+          description: "Inference latency p95 is {{ $value }}s, which exceeds the 50ms SLO"
+          runbook_url: "https://wiki.company.com/runbooks/high-latency"
+          dashboard_url: "https://grafana.company.com/d/ml-inference/ml-inference-dashboard"
+          action: "Check feature store latency and model performance. Consider cache refresh or model rollback."
+      
+      # High Error Rate Alert
+      - alert: HighErrorRate
+        expr: rate(predictions_total{status="error"}[5m]) / rate(predictions_total[5m]) > 0.001
+        for: 5m
+        labels:
+          severity: critical
+          team: ml-ops
+          service: churn-prediction
+        annotations:
+          summary: "Model error rate exceeded 0.1%"
+          description: "Error rate is {{ $value | humanizePercentage }}, which exceeds the 0.1% SLO"
+          runbook_url: "https://wiki.company.com/runbooks/high-error-rate"
+          action: "Check application logs and model health. Initiate automatic rollback if configured."
+      
+      # Model Drift Alert
+      - alert: ModelDrift
+        expr: rate(prediction_distribution_shift[15m]) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+          team: ml-team
+          service: churn-prediction
+        annotations:
+          summary: "Model drift detected"
+          description: "Prediction distribution has shifted by {{ $value | humanizePercentage }} in the last 15 minutes"
+          runbook_url: "https://wiki.company.com/runbooks/model-drift"
+          action: "Check feature store vs training distribution. Consider retraining model."
+      
+      # Feature Drift Alert
+      - alert: FeatureDrift
+        expr: avg_over_time(feature_drift_score[5m]) > 0.15
+        for: 15m
+        labels:
+          severity: warning
+          team: ml-team
+          service: churn-prediction
+        annotations:
+          summary: "Feature drift detected"
+          description: "Feature drift score is {{ $value }}, indicating significant data changes"
+          runbook_url: "https://wiki.company.com/runbooks/feature-drift"
+          action: "Validate data pipeline and feature engineering. Check for upstream data changes."
+      
+      # Circuit Breaker Open Alert
+      - alert: CircuitBreakerOpen
+        expr: circuit_breaker_state{service="feature-store"} == 1
+        for: 1m
+        labels:
+          severity: warning
+          team: ml-ops
+          service: feature-store
+        annotations:
+          summary: "Circuit breaker is open"
+          description: "Feature store circuit breaker has been open for more than 1 minute"
+          runbook_url: "https://wiki.company.com/runbooks/circuit-breaker"
+          action: "Check feature store health and database connections. Serving stale features."
+      
+      # High Memory Usage Alert
+      - alert: HighMemoryUsage
+        expr: (container_memory_usage_bytes{name="churn-model"} / container_spec_memory_limit_bytes{name="churn-model"}) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          team: ml-ops
+          service: churn-prediction
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value | humanizePercentage }} of limit"
+          action: "Monitor for memory leaks. Consider increasing memory limits or investigating memory usage."
+      
+      # High CPU Usage Alert
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total{name="churn-model"}[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          team: ml-ops
+          service: churn-prediction
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is {{ $value | humanizePercentage }} of limit"
+          action: "Check for performance bottlenecks. Consider horizontal scaling."
+      
+      # Cost Anomaly Alert
+      - alert: CostAnomaly
+        expr: increase(inference_cost_usd_total[1h]) > 1.5 * avg_over_time(inference_cost_usd_total[1h] offset 7d)
+        for: 30m
+        labels:
+          severity: info
+          team: ml-ops
+          service: churn-prediction
+        annotations:
+          summary: "Unusual cost increase detected"
+          description: "Hourly inference costs are {{ $value | humanizePercentage }} higher than last week"
+          action: "Review traffic patterns and model routing. Check for cost optimization opportunities."
+      
+      # Low Cache Hit Rate Alert
+      - alert: LowCacheHitRate
+        expr: rate(feature_store_cache_hits_total[5m]) / rate(feature_store_requests_total[5m]) < 0.7
+        for: 10m
+        labels:
+          severity: warning
+          team: ml-ops
+          service: feature-store
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }}, which is below 70%"
+          action: "Check cache configuration and TTL settings. Consider cache warming strategies."
+      
+      # Database Connection Pool Exhaustion Alert
+      - alert: DatabasePoolExhaustion
+        expr: asyncpg_pool_size / asyncpg_pool_max_size > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          team: ml-ops
+          service: feature-store
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Connection pool usage is {{ $value | humanizePercentage }}"
+          action: "Monitor database connections. Consider increasing pool size or investigating connection leaks."
+      
+      # Model Load Failure Alert
+      - alert: ModelLoadFailure
+        expr: increase(model_load_failures_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          team: ml-ops
+          service: churn-prediction
+        annotations:
+          summary: "Model loading failed"
+          description: "{{ $value }} model load failures in the last 5 minutes"
+          action: "Check MLflow registry connectivity and model artifacts. Verify model compatibility."
+      
+      # A/B Test Imbalance Alert
+      - alert: ABTestImbalance
+        expr: abs(rate(predictions_total{model_variant="A"}[5m]) - rate(predictions_total{model_variant="B"}[5m])) / rate(predictions_total[5m]) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          team: ml-team
+          service: churn-prediction
+        annotations:
+          summary: "A/B test traffic imbalance"
+          description: "Traffic split between variants is more than 10% off target"
+          action: "Check load balancer configuration and traffic routing rules."
+      
+      # Prediction Volume Drop Alert
+      - alert: PredictionVolumeDrop
+        expr: rate(predictions_total[5m]) < 0.5 * avg_over_time(rate(predictions_total[5m] offset 1w)[1h:])
+        for: 15m
+        labels:
+          severity: warning
+          team: ml-ops
+          service: churn-prediction
+        annotations:
+          summary: "Prediction volume dropped significantly"
+          description: "Current prediction rate is {{ $value | humanizePercentage }} of normal"
+          action: "Check upstream services and client integrations. Verify API availability."
+      
+      # Security: Unusual Request Pattern Alert
+      - alert: UnusualRequestPattern
+        expr: rate(http_requests_total{status_code="429"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          team: security
+          service: churn-prediction
+        annotations:
+          summary: "High rate of rate-limited requests"
+          description: "{{ $value }} rate-limited requests per second"
+          action: "Investigate potential abuse or misconfigured clients. Check rate limiting rules."
+
+  - name: infrastructure
+    interval: 60s
+    rules:
+      # ECS Service Health Alert
+      - alert: ECSServiceUnhealthy
+        expr: aws_ecs_service_running_count / aws_ecs_service_desired_count < 0.8
+        for: 5m
+        labels:
+          severity: critical
+          team: ml-ops
+          service: ecs
+        annotations:
+          summary: "ECS service is unhealthy"
+          description: "Only {{ $value | humanizePercentage }} of desired tasks are running"
+          action: "Check ECS service events and task health. Investigate task failures."
+      
+      # Application Load Balancer Health Alert
+      - alert: ALBTargetUnhealthy
+        expr: aws_alb_healthy_host_count < aws_alb_un_healthy_host_count
+        for: 5m
+        labels:
+          severity: critical
+          team: ml-ops
+          service: load-balancer
+        annotations:
+          summary: "Load balancer targets are unhealthy"
+          description: "More unhealthy targets than healthy ones"
+          action: "Check target health and application logs. Verify health check configuration."
+      
+      # Disk Space Alert
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          team: ml-ops
+          service: infrastructure
+        annotations:
+          summary: "Disk space is running low"
+          description: "Available disk space is {{ $value | humanizePercentage }}"
+          action: "Clean up old logs and temporary files. Consider increasing disk size."
+      
+      # SSL Certificate Expiry Alert
+      - alert: SSLCertificateExpiring
+        expr: ssl_certificate_expiry_seconds < 7 * 24 * 60 * 60  # 7 days
+        for: 1h
+        labels:
+          severity: warning
+          team: ml-ops
+          service: security
+        annotations:
+          summary: "SSL certificate expiring soon"
+          description: "SSL certificate expires in {{ $value | humanizeDuration }}"
+          action: "Renew SSL certificate to avoid service disruption."
+
+  - name: business_metrics
+    interval: 300s  # 5 minutes for business metrics
+    rules:
+      # Business Impact Alert
+      - alert: BusinessImpactDegradation
+        expr: rate(business_savings_usd[1h]) < 0.8 * avg_over_time(rate(business_savings_usd[1h] offset 1d)[1h:])
+        for: 1h
+        labels:
+          severity: warning
+          team: business
+          service: churn-prediction
+        annotations:
+          summary: "Business impact degraded"
+          description: "Business savings are {{ $value | humanizePercentage }} below normal"
+          action: "Review model performance and business metrics. Check for data quality issues."
+      
+      # Customer Churn Rate Alert
+      - alert: CustomerChurnRateSpike
+        expr: increase(predictions_total{prediction="1"}[1h]) / increase(predictions_total[1h]) > 0.3
+        for: 2h
+        labels:
+          severity: info
+          team: business
+          service: churn-prediction
+        annotations:
+          summary: "High churn rate detected"
+          description: "Predicted churn rate is {{ $value | humanizePercentage }}"
+          action: "Review business strategy and customer retention programs. Verify model calibration."

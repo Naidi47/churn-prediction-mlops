@@ -1,0 +1,41 @@
+data_source:
+  url: "s3://customer-data-lake/churn/"
+  format: "parquet"
+  date_range: "2023-01-01 to 2024-12-01"
+
+validation:
+  null_threshold: 0.05
+  drift_threshold: 0.1
+  expectation_suite: "churn_data_suite"
+
+features:
+  target_column: "churn"
+  categorical_features: ["region", "payment_method", "subscription_type"]
+  numerical_features: ["tenure_days", "monthly_charges", "total_charges"]
+  feature_crosses: true
+  scaling_method: "standard"
+
+training:
+  model_type: "xgboost"
+  n_estimators: 100
+  max_depth: 3
+  learning_rate: 0.1
+  subsample: 1.0
+  colsample_bytree: 1.0
+  budget_limit_usd: 50.0
+
+evaluation:
+  metrics: ["accuracy", "precision", "recall", "f1", "auc"]
+  calibration_bins: 10
+  fairness_metrics: true
+  slice_analysis: true
+
+mlflow:
+  experiment_name: "churn_prediction_experiment"
+  model_name: "churn_prediction"
+  stage: "Staging"
+  tags:
+    owner: "ml-team"
+    cost_center: "engineering"
+    p95_latency_target: "50ms"
+    error_rate_target: "0.1%"
